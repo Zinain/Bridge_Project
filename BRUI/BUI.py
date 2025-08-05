@@ -5,7 +5,7 @@ import ConnectionManager
 import sys
 import json
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox
+    QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QCheckBox, QTextEdit
 )
 from PyQt5.QtCore import Qt
 
@@ -13,6 +13,11 @@ class BridgeControlUI(QWidget):
     def __init__(self):
         super().__init__()  # Call parent class constructor
         self.setWindowTitle("Bridge Remote Control Interface")
+
+        # Side message panel (log area)
+        self.message_log = QTextEdit()
+        self.message_log.setReadOnly(True)
+        self.message_log.setPlaceholderText("Messages received will appear here...")
 
         # Status labels to display system state
         self.bridge_status_label = QLabel("Bridge Status: CLOSED")
@@ -61,6 +66,11 @@ class BridgeControlUI(QWidget):
 
         # Add button layout to main layout
         layout.addLayout(button_layout)
+        layout.addLayout(button_layout, 1)       # Buttons on the left
+        layout.addWidget(self.message_log, 3)    # Message box on the right
+
+        self.setLayout(layout)
+        self.resize(600, 400)
 
         # Set the layout to the main window
         self.setLayout(layout)
@@ -68,7 +78,7 @@ class BridgeControlUI(QWidget):
     def open_bridge(self):
         """Simulate opening the bridge"""
         if not self.bridge_open:
-            ConnectionManager.udp_open()
+            self.message_log.append(f"🡺 {ConnectionManager.udp_open()}")
             self.bridge_status_label.setText("Bridge Status: OPENING...")
             # Simulate some processing delay here if needed
             self.bridge_status_label.setText("Bridge Status: OPEN")
@@ -77,7 +87,7 @@ class BridgeControlUI(QWidget):
     def close_bridge(self):
         """Simulate closing the bridge"""
         if self.bridge_open:
-            ConnectionManager.udp_close()
+            self.message_log.append(f"🡺 {ConnectionManager.udp_close()}")
             self.bridge_status_label.setText("Bridge Status: CLOSING...")
             # Simulate some processing delay here if needed
             self.bridge_status_label.setText("Bridge Status: CLOSED")
@@ -85,7 +95,7 @@ class BridgeControlUI(QWidget):
 
     def reset_system(self):
         """Reset system state (useful for simulation or re-sync)"""
-        ConnectionManager.udp_reset()
+        self.message_log.append(f"🡺 {ConnectionManager.udp_reset()}")
         self.bridge_open = False
         self.ship_detected = False
         self.lights = False
@@ -95,24 +105,28 @@ class BridgeControlUI(QWidget):
         self.lights_status_label.setText("Lights: OFF")
         
     def lights_on(self):
-        ConnectionManager.udp_lighton()
-        "Lights simulation"
-        self.lights_status_label.setText("Lights: ON")
-        self.lights = True
+        if not self.lights:
+            self.message_log.append(f"🡺 {ConnectionManager.udp_lighton()}")
+            "Lights simulation"
+            self.lights_status_label.setText("Lights: ON")
+            self.lights = True
 
     def lights_off(self):
-        ConnectionManager.udp_lightoff()
-        "Lights simulation"
-        self.lights_status_label.setText("Lights: OFF")
-        self.lights = False
+        if self.lights:
+            self.message_log.append(f"🡺 {ConnectionManager.udp_lightoff()}")
+            "Lights simulation"
+            self.lights_status_label.setText("Lights: OFF")
+            self.lights = False
 
     def toggle_override(self, state):
         """Enable or disable override mode"""
         if state == Qt.Checked:
-            ConnectionManager.udp_swtich("TRUE")
+            message = "TRUE"
+            self.message_log.append(f"🡺 {ConnectionManager.udp_swtich(message)}")
             print("Sensor override enabled")
         else:
-            ConnectionManager.udp_swtich("FALSE")
+            message = "FALSE"
+            self.message_log.append(f"🡺 {ConnectionManager.udp_swtich(message)}")
             print("Sensor override disabled")
 
 
