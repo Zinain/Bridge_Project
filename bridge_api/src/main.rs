@@ -1,11 +1,18 @@
-fn main() {
-    // It is necessary to call this function once. Otherwise some patches to the runtime
-    // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
-    esp_idf_svc::sys::link_patches();  
-    //hello
+use esp_idf_hal::prelude::*;
+use esp_idf_hal::gpio::{PinDriver, Output};
+use std::thread::sleep;
+use std::time::Duration;
 
-    // Bind the log crate to the ESP Logging facilities
-    esp_idf_svc::log::EspLogger::initialize_default();
+fn main() -> anyhow::Result<()> {
+    esp_idf_sys::link_patches(); // required for ESP-IDF runtime
 
-    log::info!("Hello, world!");
+    let peripherals = Peripherals::take().unwrap();
+    let mut led = PinDriver::output(peripherals.pins.gpio48)?;
+
+    loop {
+        led.set_high()?;
+        sleep(Duration::from_millis(500));
+        led.set_low()?;
+        sleep(Duration::from_millis(500));
+    }
 }
