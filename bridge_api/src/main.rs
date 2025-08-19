@@ -17,87 +17,68 @@ fn main() -> anyhow::Result<()> {
     }
 }*/ //this is a working test for a motor
 use std::net::UdpSocket;
-use anyhow::Result;
-use esp_idf_svc::wifi::*;
+use std::time::Duration;
+use heapless::String;
+use core::convert::TryFrom;
+
 use esp_idf_svc::eventloop::EspSystemEventLoop;
-use esp_idf_svc::netif::*;
-use esp_idf_svc::nvs::*;
-use embedded_svc::wifi::*;
-use serde::{Serialize, Deserialize};
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
+use esp_idf_hal::peripherals::Peripherals;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Request {
-    command: String,
-    value: i32,
-}
+fn main() -> anyhow::Result<()> {
+    // Initialize peripherals
+    let peripherals = Peripherals::take().unwrap();
+    let modem = peripherals.modem;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Response {
-    status: String,
-    message: String,
-}
 
-fn connect_wifi(ssid: &str, password: &str) -> Result<()> {
+    // Take system event loop
     let sysloop = EspSystemEventLoop::take()?;
-    let nvs = EspDefaultNvsPartition::take()?;
-    let mut wifi = EspWifi::new(netif::EspNetifStack::new()?, sysloop.clone(), Some(nvs))?;
 
-    wifi.set_configuration(&Configuration::Client(ClientConfiguration {
-        ssid: ssid.into(),
-        password: password.into(),
-        ..Default::default()
-    }))?;
+    // Setup Wi-Fi
+    let nvs_partition = EspDefaultNvsPartition::take()?;
+    let mut wifi = EspWifi::new(modem, sysloop.clone(), Some(nvs_partition))?;
+
+    let mut wifi = BlockingWifi::wrap(&mut wifi, sysloop)?;
+
+    let ssid: String<32> = String::try_from("check").unwrap();
+    let pass: String<64> = String::try_from("123456789").unwrap();
+
+    wifi.set_configuration(&esp_idf_svc::wifi::Configuration::Client(
+        esp_idf_svc::wifi::ClientConfiguration {
+            ssid,
+            password: pass,
+            ..Default::default()
+        },
+    ))?;
 
     wifi.start()?;
     wifi.connect()?;
-    wifi.wait_netif_up()?;
 
-    println!("Connected to Wi-Fi: {}", ssid);
-    Ok(())
-}
-
-fn main() -> Result<()> {
-    esp_idf_sys::link_patches();
-    println!("ESP32 Rust UDP JSON Client starting...");
-
-    // Wi-Fi credentials
-    let ssid = "YourWiFiSSID";
-    let password = "YourWiFiPassword";
-    connect_wifi(ssid, password)?;
-
-    // UDP setup
-    let server_addr = "192.168.1.100:8080"; // Replace with API server
-    let local_addr = "0.0.0.0:12345";
-    let socket = UdpSocket::bind(local_addr)?;
-    println!("📡 UDP socket bound to {}", local_addr);
-
-    // --- JSON Send ---
-    let request = Request {
-        command: "ping".to_string(),
-        value: 42,
-    };
-
-    let json_str = serde_json::to_string(&request)?;
-    socket.send_to(json_str.as_bytes(), server_addr)?;
-    println!("Sent JSON: {}", json_str);
-
-    // --- JSON Receive ---
-    let mut buf = [0u8; 512];
-    match socket.recv_from(&mut buf) {
-        Ok((len, from)) => {
-            let received = String::from_utf8_lossy(&buf[..len]);
-            println!("Received from {}: {}", from, received);
-
-            // Try to parse JSON
-            match serde_json::from_str::<Response>(&received) {
-                Ok(resp) => println!("Parsed Response: {:?}", resp),
-                Err(e) => println!("Failed to parse JSON: {}", e),
-            }
-        }
-        Err(e) => {
-            println!("Failed to receive: {}", e);
-        }
+    while !wifi.is_connected()? {
+        std::thread::sleep(Duration::from_millis(100));
     }
 
-    Ok(())
+    println!("Connected to Wi-Fi!");
+    println!("IP info: {:?}", wifi.wifi().sta_netif().get_ip_info()?.ip);
+
+    // UDP example
+    let socket = UdpSocket::bind("192.168.1.100:12345")?;
+    socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+
+    let mut buf = [0u8; 512];
+    loop {
+        match socket.recv_from(&mut buf) {
+            Ok((size, src)) => {
+                let msg = core::str::from_utf8(&buf[..size]).unwrap();
+                println!("Received from {}: {}", src, msg);
+
+                // Echo JSON back
+                socket.send_to(msg.as_bytes(), src)?;
+            }
+            Err(e) => {
+                println!("Timeout or error: {:?}", e);
+            }
+        }
+    }
 }
