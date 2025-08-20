@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
     println!("IP info: {:?}", wifi.wifi().sta_netif().get_ip_info()?.ip);
 
     // UDP example
-    let socket = UdpSocket::bind("192.168.1.100:12345")?;
+    let socket = UdpSocket::bind("192.168.1.100:5000")?;
     socket.set_read_timeout(Some(Duration::from_secs(5)))?;
 
     let mut buf = [0u8; 512];
