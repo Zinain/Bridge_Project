@@ -4,7 +4,7 @@ from datetime import datetime
 import socket
 import json
 
-def udp_client(message, host='localhost', port=12345):
+def udp_client(message, host='192.168.1.100', port=12345):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     json_data = json.dumps(message)
