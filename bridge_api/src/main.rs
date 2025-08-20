@@ -75,7 +75,7 @@ fn main() -> anyhow::Result<()> {
 
     // UDP example
     let socket = UdpSocket::bind("192.168.1.100:5000")?;
-    socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    //socket.set_read_timeout(Some(Duration::from_secs(5)))?;
 
     let mut buf = [0u8; 512];
     loop {
