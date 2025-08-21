@@ -136,3 +136,4 @@ if __name__ == "__main__":
     window = BridgeControlUI()    # Create main window
     window.show()                 # Display window
     sys.exit(app.exec_())         # Start event loop
+    ConnectionManager.udp_init()

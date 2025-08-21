@@ -4,7 +4,7 @@ from datetime import datetime
 import socket
 import json
 
-def udp_client(message, host='192.168.1.100', port=12345):
+def udp_client(message, host='0.0.0.0', port=5000):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     json_data = json.dumps(message)
@@ -18,6 +18,15 @@ def udp_client(message, host='192.168.1.100', port=12345):
         return response
     except socket.timeout:
         print("No response received (timeout).")
+
+#Setup init
+def udp_init():
+    data_to_send = {
+        "type": "GREET",
+        "command": "AKC",
+        "timestamp": datetime.now().isoformat()
+    }
+    return udp_client(data_to_send)
 
 #Close bridge command
 def udp_close():
