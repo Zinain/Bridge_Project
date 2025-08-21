@@ -52,8 +52,8 @@ fn main() -> anyhow::Result<()> {
 
     let mut wifi = BlockingWifi::wrap(&mut wifi, sysloop)?;
 
-    let ssid: String<32> = String::try_from("check").unwrap();
-    let pass: String<64> = String::try_from("123456789").unwrap();
+    let ssid: String<32> = String::try_from("Aussie Broadband 9997").unwrap();
+    let pass: String<64> = String::try_from("cakuyuxsds").unwrap();
 
     wifi.set_configuration(&esp_idf_svc::wifi::Configuration::Client(
         esp_idf_svc::wifi::ClientConfiguration {
@@ -75,7 +75,7 @@ fn main() -> anyhow::Result<()> {
 
     // UDP example
     let socket = UdpSocket::bind("192.168.1.100:5000")?;
-    socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    //socket.set_read_timeout(Some(Duration::from_secs(5)))?;
 
     let mut buf = [0u8; 512];
     loop {
