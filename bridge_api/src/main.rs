@@ -27,69 +27,39 @@ fn main() -> anyhow::Result<()> {
         FreeRtos::delay_ms(5);
     }
 }*/ //this is a working test for a motor
-use std::net::UdpSocket;
+use std::net::TcpStream;
+use std::io::{Read, Write};
 use std::time::Duration;
-use heapless::String;
-use core::convert::TryFrom;
-
-use esp_idf_svc::eventloop::EspSystemEventLoop;
-use esp_idf_svc::nvs::EspDefaultNvsPartition;
-use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
-use esp_idf_hal::peripherals::Peripherals;
+use serde_json::json;
 
 fn main() -> anyhow::Result<()> {
-    // Initialize peripherals
-    let peripherals = Peripherals::take().unwrap();
-    let modem = peripherals.modem;
+    // Server IP (replace with your PC's IP where Python server is running)
+    let server_addr = "192.168.1.50:5000";
 
+    // Connect to server
+    let mut stream = TcpStream::connect(server_addr)?;
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    println!("Connected to server {}", server_addr);
 
-    // Take system event loop
-    let sysloop = EspSystemEventLoop::take()?;
+    // Example JSON message
+    let message = json!({
+        "type": "COMMAND",
+        "command": "OPENB",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+    });
 
-    // Setup Wi-Fi
-    let nvs_partition = EspDefaultNvsPartition::take()?;
-    let mut wifi = EspWifi::new(modem, sysloop.clone(), Some(nvs_partition))?;
+    // Send JSON
+    let json_str = message.to_string();
+    stream.write_all(json_str.as_bytes())?;
+    println!("Sent: {}", json_str);
 
-    let mut wifi = BlockingWifi::wrap(&mut wifi, sysloop)?;
+    // Receive response
+    let mut buf = [0u8; 4096];
+    let size = stream.read(&mut buf)?;
+    let response = String::from_utf8_lossy(&buf[..size]);
+    println!("Received: {}", response);
 
-    let ssid: String<32> = String::try_from("Aussie Broadband 9997").unwrap();
-    let pass: String<64> = String::try_from("cakuyuxsds").unwrap();
-
-    wifi.set_configuration(&esp_idf_svc::wifi::Configuration::Client(
-        esp_idf_svc::wifi::ClientConfiguration {
-            ssid,
-            password: pass,
-            ..Default::default()
-        },
-    ))?;
-
-    wifi.start()?;
-    wifi.connect()?;
-
-    while !wifi.is_connected()? {
-        std::thread::sleep(Duration::from_millis(100));
-    }
-
-    println!("Connected to Wi-Fi!");
-    println!("IP info: {:?}", wifi.wifi().sta_netif().get_ip_info()?.ip);
-
-    // UDP example
-    let socket = UdpSocket::bind("192.168.1.100:5000")?;
-    //socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-
-    let mut buf = [0u8; 512];
-    loop {
-        match socket.recv_from(&mut buf) {
-            Ok((size, src)) => {
-                let msg = core::str::from_utf8(&buf[..size]).unwrap();
-                println!("Received from {}: {}", src, msg);
-
-                // Echo JSON back
-                socket.send_to(msg.as_bytes(), src)?;
-            }
-            Err(e) => {
-                println!("Timeout or error: {:?}", e);
-            }
-        }
-    }
+    Ok(())
 }
+
+
