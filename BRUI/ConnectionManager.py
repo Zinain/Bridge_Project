@@ -4,20 +4,58 @@ from datetime import datetime
 import socket
 import json
 
-def udp_client(message, host='0.0.0.0', port=5000):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    json_data = json.dumps(message)
-    sock.sendto(json_data.encode(), (host, port))
-    print("Message sent.")
+import socket
+import json
+from datetime import datetime
 
-    try:
-        data, addr = sock.recvfrom(4096)
-        response = json.loads(data.decode())
-        print(f"Received response from {addr}: {response}")
-        return response
-    except socket.timeout:
-        print("No response received (timeout).")
+HOST = "0.0.0.0"   # listen on all interfaces
+PORT = 5000
+
+def handle_client(conn, addr):
+    print(f"New connection from {addr}")
+    with conn:
+        while True:
+            try:
+                data = conn.recv(4096)
+                if not data:
+                    print(f"Client {addr} disconnected")
+                    break
+
+                message = json.loads(data.decode())
+                print(f"Received from {addr}: {message}")
+
+                # Example response: echo with timestamp
+                response = {
+                    "status": "OK",
+                    "received": message,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+                conn.sendall(json.dumps(response).encode())
+
+            except json.JSONDecodeError:
+                print("Invalid JSON received")
+                break
+            except Exception as e:
+                print(f"Error handling client {addr}: {e}")
+                break
+
+
+def run_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((HOST, PORT))
+        server.listen()
+        print(f"TCP server running on {HOST}:{PORT}")
+
+        while True:
+            conn, addr = server.accept()
+            handle_client(conn, addr)
+
+
+if __name__ == "__main__":
+    run_server()
+
 
 #Setup init
 def udp_init():
