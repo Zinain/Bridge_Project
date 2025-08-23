@@ -34,7 +34,7 @@ use serde_json::json;
 
 fn main() -> anyhow::Result<()> {
     // Server IP (replace with your PC's IP where Python server is running)
-    let server_addr = "192.168.1.50:5000";
+    let server_addr = "172.18.48.1:5000";
 
     // Connect to server
     let mut stream = TcpStream::connect(server_addr)?;
