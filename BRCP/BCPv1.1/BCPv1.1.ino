@@ -1,13 +1,9 @@
-/*********
-  Rui Santos
-  Complete project details at https://randomnerdtutorials.com  
-*********/
 
 // Load Wi-Fi library
 #include <WiFi.h>
 
 // Replace with your network credentials
-const char* ssid     = "ESP32-Access-Point";
+const char* ssid     = "Systems10";
 const char* password = "123456789";
 
 // Set web server port number to 80
@@ -25,62 +21,63 @@ String outputGREEN = "on";
 String Brstat = "closed";
 //Override on/off state
 bool overrided = false;
+//define sound speed in cm/uS
+#define SOUND_SPEED 0.034
+long duration1;
+long duration2;
+float distanceCm1;
+float distanceCm2;
+
+
 
 
 // Assign output variables to GPIO pins
 //Red LED pins
-const int outputRED1 = 34;
-const int outputRED2 = 32;
-const int outputRED3 = 25;
-const int outputRED4 = 27;
+const int BoatRED = 25;
+const int TrafficRED = 32;
 //Green LED pins
-const int outputGREEN1 = 35;
-const int outputGREEN2 = 33;
-const int outputGREEN3 = 26;
-const int outputGREEN4 = 14;
+const int BoatGREEN = 26;
+const int TrafficGREEN = 33;
 //Motor pins
 const int motor1pin1 = 4;
 const int motor1pin2 = 2;
+const int ENA = 13; //speed control
+//Ultrasonic sensor pins
+const int echo1 = 5;
+const int echo2 = 18;
+const int trigg1 = 19;
+const int trigg2 = 21;
+
 
 void BoatStopSignal(){
   //Red light on for 2 seconds
-  digitalWrite(outputGREEN1, LOW);
-  digitalWrite(outputGREEN2, LOW);
-  digitalWrite(outputRED1, HIGH);
-  digitalWrite(outputRED2, HIGH);
+  digitalWrite(BoatGREEN, LOW);
+  digitalWrite(BoatRED, HIGH);
   delay(2000);
-  digitalWrite(outputRED1, LOW);
-  digitalWrite(outputRED2, LOW);
+  digitalWrite(BoatRED, LOW);
 }
 
 void BoatGoSignal(){
   //Green light on 
-  digitalWrite(outputGREEN1, HIGH);
-  digitalWrite(outputGREEN2, HIGH);
+  digitalWrite(BoatGREEN, HIGH);
 }
 
 void TrafficStopSignal(){
   //Red and green blinking
   for (int i = 0; i < 5; i++) {
-    digitalWrite(outputRED3, HIGH);
-    digitalWrite(outputRED4, HIGH);
-    digitalWrite(outputGREEN3, HIGH);
-    digitalWrite(outputGREEN4, HIGH);
+    digitalWrite(TrafficRED, HIGH);
+    digitalWrite(TrafficGREEN, HIGH);
     delay(500);
-    digitalWrite(outputRED3, LOW);
-    digitalWrite(outputRED4, LOW);
-    digitalWrite(outputGREEN3, LOW);
-    digitalWrite(outputGREEN4, LOW);
+    digitalWrite(TrafficRED, LOW);
+    digitalWrite(TrafficGREEN, LOW);
     delay(500);
   }
 }
 
 void TrafficGoSignal(){
   //green on
-  digitalWrite(outputRED3, LOW);
-  digitalWrite(outputRED4, LOW);
-  digitalWrite(outputGREEN3, HIGH);
-  digitalWrite(outputGREEN4, HIGH);
+  digitalWrite(TrafficRED, LOW);
+  digitalWrite(TrafficGREEN, HIGH);
 }
 
 void BridgeOpen(){
@@ -89,91 +86,90 @@ void BridgeOpen(){
   //motor stops
   //Green lights for boats are on
   //Red lights for traffic
+  TrafficStopSignal();
   for (int i = 0; i < 6; i++) {
-    digitalWrite(outputRED1, HIGH);
-    digitalWrite(outputRED2, HIGH);
-    digitalWrite(outputGREEN1, HIGH);
-    digitalWrite(outputGREEN2, HIGH);
-    motorForward();
+    digitalWrite(BoatRED, HIGH);
+    digitalWrite(BoatGREEN, HIGH);
+    motorForward(180);
     delay(500);
-    digitalWrite(outputRED1, LOW);
-    digitalWrite(outputRED2, LOW);
-    digitalWrite(outputGREEN1, LOW);
-    digitalWrite(outputGREEN2, LOW);
+    digitalWrite(BoatRED, LOW);
+    digitalWrite(BoatGREEN, LOW);
     delay(500);
   }
   stopMotor();
 
   // Green lights for boats, red lights for traffic
-  BoatGoSignal();
-  digitalWrite(outputRED3, HIGH);
-  digitalWrite(outputRED4, HIGH);
-  digitalWrite(outputGREEN3, LOW);
-  digitalWrite(outputGREEN4, LOW);
+  digitalWrite(BoatGREEN, HIGH);
+  digitalWrite(BoatRED, LOW);
+  digitalWrite(TrafficRED, HIGH);
+  digitalWrite(TrafficGREEN, LOW);
 }
 
 void BridgeClose(){
   //similarly to the above but the bridge closes
   for (int i = 0; i < 6; i++) {
-    digitalWrite(outputRED1, HIGH);
-    digitalWrite(outputRED2, HIGH);
-    digitalWrite(outputGREEN1, HIGH);
-    digitalWrite(outputGREEN2, HIGH);
-    motorBackward();
+    digitalWrite(BoatRED, HIGH);
+    digitalWrite(BoatGREEN, HIGH);
+    motorBackward(180);
     delay(500);
-    digitalWrite(outputRED1, LOW);
-    digitalWrite(outputRED2, LOW);
-    digitalWrite(outputGREEN1, LOW);
-    digitalWrite(outputGREEN2, LOW);
+    digitalWrite(BoatRED, LOW);
+    digitalWrite(BoatGREEN, LOW);
     delay(500);
   }
   stopMotor();
 
   BoatStopSignal();
   TrafficGoSignal();
+  digitalWrite(BoatGREEN, LOW);
+  digitalWrite(BoatRED, HIGH);
 }
 
 void stopMotor(){
   digitalWrite(motor1pin1, LOW);
   digitalWrite(motor1pin2, LOW);
+  analogWrite(ENA, 0);
 }
 
-void motorForward() { // opening
+void motorForward(int speed) { // opening
   digitalWrite(motor1pin1, HIGH);
   digitalWrite(motor1pin2, LOW);
+  analogWrite(ENA, speed);
 }
 
-void motorBackward() { // closing
+void motorBackward(int speed) { // closing
   digitalWrite(motor1pin1, LOW);
   digitalWrite(motor1pin2, HIGH);
+  analogWrite(ENA, speed);
 }
 
 void setup() {
   Serial.begin(115200);
   // Initialize the output variables as outputs
   //RED pins
-  pinMode(outputRED1, OUTPUT);
-  pinMode(outputRED2, OUTPUT);
-  pinMode(outputRED3, OUTPUT);
-  pinMode(outputRED4, OUTPUT);
+  pinMode(BoatRED, OUTPUT);
+  pinMode(TrafficRED, OUTPUT);
   //GREEn pins
-  pinMode(outputGREEN1, OUTPUT);
-  pinMode(outputGREEN2, OUTPUT);
-  pinMode(outputGREEN3, OUTPUT);
-  pinMode(outputGREEN4, OUTPUT);
+  pinMode(BoatGREEN, OUTPUT);
+  pinMode(TrafficGREEN, OUTPUT);
   //Motor pins
   pinMode(motor1pin1, OUTPUT);
   pinMode(motor1pin2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  //Ultrasonic pins
+  pinMode(trigg1, OUTPUT);
+  pinMode(trigg2, OUTPUT);
+  pinMode(echo1, INPUT);
+  pinMode(echo2, INPUT);
   // Set outputs to LOW
-  digitalWrite(outputRED1, LOW);
-  digitalWrite(outputRED2, LOW);
-  digitalWrite(outputRED3, LOW);
-  digitalWrite(outputRED4, LOW);
+  digitalWrite(BoatRED, LOW);
+  digitalWrite(TrafficRED, LOW);
 
-  digitalWrite(outputGREEN1, LOW);
-  digitalWrite(outputGREEN2, LOW);
-  digitalWrite(outputGREEN3, LOW);
-  digitalWrite(outputGREEN4, LOW);
+  digitalWrite(BoatGREEN, LOW);
+  digitalWrite(TrafficGREEN, LOW);
+
+
+  digitalWrite(trigg1, LOW);
+  digitalWrite(trigg2, LOW);
   
   stopMotor();
 
@@ -202,6 +198,38 @@ void loop(){
   delay(5000);*///testing purposes
 
   WiFiClient client = server.available();   // Listen for incoming clients
+
+  /*digitalWrite(trigg1, HIGH);
+  digitalWrite(trigg2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigg1, LOW);
+  digitalWrite(trigg2, LOW);
+
+  duration1 = pulseIn(echo1, HIGH);
+  duration2 = pulseIn(echo2, HIGH);
+
+  // Calculate the distance
+  distanceCm1 = duration1 * SOUND_SPEED/2;
+  distanceCm2 = duration2 * SOUND_SPEED/2;
+  Serial.print("Distance sensor 1 (cm): ");
+  Serial.println(distanceCm1);
+  Serial.print("Distance sensor 2 (cm): ");
+  Serial.println(distanceCm2);
+
+
+
+  if(distanceCm1 < 2 || distanceCm2 < 2){
+      Brstat = "open";
+      outputRED = "on";
+      outputGREEN = "off";
+      BridgeOpen();
+      delay(10);
+      Brstat = "closed";
+      outputRED = "off";
+      outputGREEN = "on";
+      BridgeClose();
+  }*/
+
 
   if (client) {                             // If a new client connects,
     Serial.println("New Client.");          // print a message out in the serial port
@@ -232,6 +260,19 @@ void loop(){
               outputRED = "off";
               outputGREEN = "on";
               BridgeClose();
+            } else if (header.indexOf("GET /sensoroverride/off" ) >= 0){
+              Brstat = "open";
+              outputRED = "on";
+              outputGREEN = "off";
+              overrided = true;
+              client.println("<p><a href=\"/sensoroverride/on\"><button class=\"button\">Sensor Override On</button></a></p>");
+              BridgeOpen();
+              delay(10);
+              Brstat = "closed";
+              outputRED = "off";
+              outputGREEN = "on";
+              BridgeClose();
+              overrided = false;
             }
             
             // Display the HTML web page
@@ -258,6 +299,10 @@ void loop(){
               client.println("<p><a href=\"/closed/\"><button class=\"button button2\">Bridge Closed</button></a></p>");
             } else {
               client.println("<p><a href=\"/open/\"><button class=\"button\">Bridge Opened</button></a></p>");
+            }
+
+            if(!overrided){
+              client.println("<p><a href=\"/sensoroverride/off\"><button class=\"button button2\">Sensor Override Off</button></a></p>");
             }
             
             // The HTTP response ends with another blank line
