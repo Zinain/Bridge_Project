@@ -199,7 +199,7 @@ void loop(){
 
   WiFiClient client = server.available();   // Listen for incoming clients
 
-  /*digitalWrite(trigg1, HIGH);
+  digitalWrite(trigg1, HIGH);
   digitalWrite(trigg2, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigg1, LOW);
@@ -228,7 +228,7 @@ void loop(){
       outputRED = "off";
       outputGREEN = "on";
       BridgeClose();
-  }*/
+  }
 
 
   if (client) {                             // If a new client connects,
