@@ -1,10 +1,11 @@
 #include <WiFi.h>
 
 // Shared states
-extern String outputRED;
-extern String outputGREEN;
+extern String Traffic;
+extern String Boats;
 extern String Brstat;
-extern bool overrided;
+extern bool emergencyStopActive;
+
 
 // Web server reference
 extern WiFiServer server;
@@ -14,6 +15,7 @@ void setupBridgePins();
 void setupWiFiAP();
 void bridgeTask(void* parameter);
 void webTask(void* parameter);
+void CheckEmergencyButton();
 
 void setup() {
   Serial.begin(115200);

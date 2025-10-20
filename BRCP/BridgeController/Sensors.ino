@@ -7,6 +7,9 @@
 long duration1, duration2;
 float distanceCm1, distanceCm2;
 
+extern bool emergencyStopActive;
+
+
 float readDistance(int trig, int echo) {
   digitalWrite(trig, LOW);
   delayMicroseconds(2);
@@ -26,7 +29,12 @@ void bridgeTask(void* parameter) {
   unsigned long lastCheck = 0;
 
   for (;;) {
-    if (!overrided && millis() - lastCheck > 2000) {
+    if (emergencyStopActive) {
+      vTaskDelay(200 / portTICK_PERIOD_MS);
+      continue;
+    }
+    
+    if ( millis() - lastCheck > 2000) {
       lastCheck = millis();
 
       distanceCm1 = readDistance(trigg1, echo1);
@@ -35,16 +43,10 @@ void bridgeTask(void* parameter) {
       Serial.printf("Sensor1: %.2f cm, Sensor2: %.2f cm\n", distanceCm1, distanceCm2);
 
       if (distanceCm1 < 2 || distanceCm2 < 2) {
-        Brstat = "open";
-        outputRED = "on";
-        outputGREEN = "off";
         BridgeOpen();
 
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        Brstat = "closed";
-        outputRED = "off";
-        outputGREEN = "on";
         BridgeClose();
       }
     }
