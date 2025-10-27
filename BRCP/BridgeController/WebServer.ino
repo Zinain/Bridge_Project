@@ -15,6 +15,7 @@ void setupWiFiAP() {
 }
 
 // Runs on Core 0
+
 void webTask(void* parameter) {
   for (;;) {
     WiFiClient client = server.available();
@@ -35,20 +36,25 @@ void webTask(void* parameter) {
       EmergencyStopToggle();
     } else if (request.indexOf("/restate") >= 0) {
       reState();
+    } else if(request.indexOf("/toggle_traffic") >= 0) {
+      TrafficToggle();
+    } else if(request.indexOf("/toggle_boats") >= 0) {
+      BoatToggle();
+    } else if(request.indexOf("/manual_open") >= 0) {
+      ManualOpen();
+    } else if(request.indexOf("/manual_close") >= 0) {
+      ManualClose();
     } else if (request.indexOf("GET /status") >= 0) {
-      // Return JSON status (for AJAX refresh)
       client.println("HTTP/1.1 200 OK");
       client.println("Content-Type: application/json");
       client.println("Connection: close\r\n");
       client.print("{\"bridge\":\"" + Brstat + 
-                   "\",\"red\":\"" + Traffic + 
-                   "\",\"green\":\"" + Boats +
+                   "\",\"traffic\":\"" + Traffic + 
+                   "\",\"boats\":\"" + Boats +
                    "\",\"emergency\":\"" + (emergencyStopActive ? "ON" : "OFF") + "\"}");
       client.stop();
       continue;
     }
-    
-    
 
     // Serve main HTML page
     client.println("HTTP/1.1 200 OK");
@@ -67,7 +73,8 @@ void webTask(void* parameter) {
     client.println(".open{background-color:#28a745;}.open:hover{background-color:#34d058;}");
     client.println(".close{background-color:#dc3545;}.close:hover{background-color:#ff4d5e;}");
     client.println(".stop{background-color:#ff9800;}.stop:hover{background-color:#ffb84d;}");
-    client.println(".restate{background-color:#ff9800;}.stop:hover{background-color:#ffb84d;}");
+    client.println(".restate{background-color:#007bff;}.restate:hover{background-color:#3399ff;}");
+    client.println(".manual{background-color:#6f42c1;}.manual:hover{background-color:#8a63d2;}");
     client.println(".footer{margin-top:auto;padding:15px 0;font-size:0.85em;opacity:0.7;text-align:center;}");
     client.println("@media(max-width:600px){h2{font-size:1.6em;}.btn{font-size:1em;padding:12px;}}");
     client.println("</style>");
@@ -76,10 +83,9 @@ void webTask(void* parameter) {
     client.println("<h2>🌉 ESP32 Bridge Controller</h2>");
     client.println("<div class='card'>");
     client.println("<div id='status'>Loading...</div>");
-    client.println("<a class='btn open' href='/open'>🔓 Open Bridge</a><br>");
-    client.println("<a class='btn close' href='/close'>🔒 Close Bridge</a><br>");
-    client.println("<a class='btn stop' href='/stop'>🛑 Emergency Stop</a>");
-    client.println("<a class='btn restate' href='/restate'>🔄 Restate</a>");
+    client.println("<div id='controls'>");
+    client.println("<div id='controls'>Loading controls...</div>");
+    client.println("</div>");
     client.println("</div>");
     client.println("<div class='footer'>ESP32 Controller &copy; 2025</div>");
     client.println("<script>");
@@ -88,10 +94,26 @@ void webTask(void* parameter) {
     client.println("  let res = await fetch('/status');");
     client.println("  let data = await res.json();");
     client.println("  let html = `<p><strong>Bridge:</strong> ${data.bridge}</p>` +");
-    client.println("             `<p>🚦 Traffic: ${data.red}</p>` +");
-    client.println("             `<p>🚦 Boats: ${data.green}</p>` +");
-    client.println("             `<p>🛑 Emergency Stop: <strong>${data.emergency}</p>`;");
+    client.println("             `<p>🚦 Traffic: ${data.traffic}</p>` +");
+    client.println("             `<p>🚤 Boats: ${data.boats}</p>` +");
+    client.println("             `<p>🛑 Emergency Stop: <strong>${data.emergency}</strong></p>`;");
     client.println("  document.getElementById('status').innerHTML = html;");
+    client.println("  let controls = document.getElementById('controls');");
+    client.println("  if (data.emergency === 'ON') {");
+    client.println("    controls.innerHTML = `");
+    client.println("      <a class='btn manual' href='/manual_open'>🔓 Manual Open</a><br>");
+    client.println("      <a class='btn manual' href='/manual_close'>🔒 Manual Close</a><br>");
+    client.println("      <a class='btn manual' href='/toggle_traffic'>🚦 Toggle Traffic Lights</a><br>");
+    client.println("      <a class='btn manual' href='/toggle_boats'>🚤 Toggle Boat Lights</a><br>");
+    client.println("      <a class='btn stop' href='/stop'>🛑 Emergency Stop</a><br>");
+    client.println("      <a class='btn restate' href='/restate'>🔄 Restate</a>`;");
+    client.println("  } else {");
+    client.println("    controls.innerHTML = `");
+    client.println("      <a class='btn open' href='/open'>🔓 Open Bridge</a><br>");
+    client.println("      <a class='btn close' href='/close'>🔒 Close Bridge</a><br>");
+    client.println("      <a class='btn stop' href='/stop'>🛑 Emergency Stop</a><br>");
+    client.println("      <a class='btn restate' href='/restate'>🔄 Restate</a>`;");
+    client.println("  }");
     client.println(" } catch(e){ console.log('Error fetching status', e); }");
     client.println("}");
     client.println("setInterval(updateStatus, 1000); updateStatus();");
@@ -100,4 +122,3 @@ void webTask(void* parameter) {
     client.stop();
   }
 }
-

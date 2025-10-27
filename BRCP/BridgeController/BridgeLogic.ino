@@ -71,6 +71,18 @@ void TrafficStopSignal() {
   Traffic = "RED";
 }
 
+void TrafficToggle(){
+  if(Traffic == "RED"){
+    digitalWrite(TrafficRED, LOW);
+    digitalWrite(TrafficGREEN, HIGH);
+    Traffic = "GREEN";
+  } else {
+    digitalWrite(TrafficRED, HIGH);
+    digitalWrite(TrafficGREEN, LOW);
+    Traffic = "RED";
+  }
+}
+
 void BoatStopSignal() {
   digitalWrite(BoatGREEN, LOW);
   digitalWrite(BoatRED, HIGH);
@@ -81,6 +93,14 @@ void BoatGoSignal() {
   digitalWrite(BoatRED, LOW);
   digitalWrite(BoatGREEN, HIGH);
   Boats = "GREEN";
+}
+
+void BoatToggle(){
+  if(Boats == "RED"){
+    BoatGoSignal();
+  } else {
+    BoatStopSignal();
+  }
 }
 
 void BridgeOpen() {
@@ -111,6 +131,17 @@ void BridgeOpen() {
   Brstat = "open";
 }
 
+void ManualOpen() {
+    Brstat = "opening";
+    for (int i = 0; i < 4 ; i++) {
+      motorForward(200);
+      delay(300);
+      delay(300);
+    }
+    stopMotor();
+    Brstat = "open";
+}
+
 void BridgeClose() {
   if (emergencyStopActive) {
     Serial.println("Cannot close bridge: Emergency stop active!");
@@ -134,6 +165,17 @@ void BridgeClose() {
   BoatStopSignal();
   TrafficGoSignal();
   Brstat = "closed";
+}
+
+void ManualClose() {
+    Brstat = "closing";
+    for (int i = 0; i < 4 ; i++) {
+      motorBackward(200);
+      delay(300);
+      delay(300);
+    }
+    stopMotor();
+    Brstat = "closed";
 }
 
 void EmergencyStopToggle() {
