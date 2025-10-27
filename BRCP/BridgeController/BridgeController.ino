@@ -15,7 +15,6 @@ void setupBridgePins();
 void setupWiFiAP();
 void bridgeTask(void* parameter);
 void webTask(void* parameter);
-void CheckEmergencyButton();
 
 void setup() {
   Serial.begin(115200);

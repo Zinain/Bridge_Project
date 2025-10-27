@@ -42,7 +42,7 @@ void bridgeTask(void* parameter) {
 
       Serial.printf("Sensor1: %.2f cm, Sensor2: %.2f cm\n", distanceCm1, distanceCm2);
 
-      if (distanceCm1 < 2 || distanceCm2 < 2) {
+      if (distanceCm1 < 5 || distanceCm2 < 5) {
         BridgeOpen();
 
         vTaskDelay(5000 / portTICK_PERIOD_MS);

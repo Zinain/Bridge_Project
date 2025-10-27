@@ -4,6 +4,12 @@ String Boats = "RED";
 String Brstat = "closed";
 bool emergencyStopActive = false;
 
+// Encoder pins
+const byte encoderA = 23;  // example pin
+const byte encoderB = 22;
+volatile long encoderCount = 0;
+long targetPosition = 0; // closed position
+
 // Motor control pins
 #define motor1pin1 4
 #define motor1pin2 2
@@ -15,8 +21,13 @@ bool emergencyStopActive = false;
 #define TrafficRED 32
 #define TrafficGREEN 33
 
-// Emergency Stop button
-#define EMERGENCY_BTN 5
+
+// Encoder
+void IRAM_ATTR onEncoderChange() {
+  int b = digitalRead(encoderB);
+  if (b == HIGH) encoderCount++;
+  else encoderCount--;
+}
 
 // Motor functions
 void stopMotor() {
@@ -88,6 +99,9 @@ void BridgeOpen() {
     digitalWrite(BoatRED, LOW);
     digitalWrite(BoatGREEN, LOW);
     delay(300);
+    if (emergencyStopActive) {
+      return;
+    }
   }
   stopMotor();
   BoatGoSignal();
@@ -112,6 +126,9 @@ void BridgeClose() {
     digitalWrite(BoatRED, LOW);
     digitalWrite(BoatGREEN, LOW);
     delay(300);
+    if (emergencyStopActive) {
+      return;
+    }
   }
   stopMotor();
   BoatStopSignal();
@@ -128,19 +145,39 @@ void EmergencyStopToggle() {
     digitalWrite(TrafficGREEN, LOW);
     digitalWrite(BoatRED, HIGH);
     digitalWrite(BoatGREEN, LOW);
+    Traffic = "RED";
+    Boats = "RED";
   } else {
     Serial.println("Emergency stop deactivated. Normal operation restored.");
   }
 }
 
-void CheckEmergencyButton() {
-  static bool lastState = HIGH;
-  bool currentState = digitalRead(EMERGENCY_BTN);
-  if (lastState == HIGH && currentState == LOW) {
-    EmergencyStopToggle();
-    delay(300);  // debounce
+
+// reState() — return to original position
+void reState() {
+  if(!emergencyStopActive){
+    return;
   }
-  lastState = currentState;
+  Serial.println("Restoring bridge to safe closed position...");
+
+  BoatStopSignal();
+  TrafficStopSignal();
+
+  // Suppose encoderCount > 0 means partially open
+  while (encoderCount > targetPosition) {
+    motorBackward(180);
+    delay(10);
+  }
+
+  stopMotor();
+  encoderCount = targetPosition;
+
+  BoatStopSignal();
+  TrafficGoSignal();
+
+  Brstat = "closed";
+
+  Serial.println("Bridge restored to closed position.");
 }
 
 void setupBridgePins() {
@@ -150,7 +187,10 @@ void setupBridgePins() {
   pinMode(BoatGREEN, OUTPUT);
   pinMode(TrafficRED, OUTPUT);
   pinMode(TrafficGREEN, OUTPUT);
-  pinMode(EMERGENCY_BTN, INPUT_PULLUP);
+  pinMode(encoderA, INPUT_PULLUP);
+  pinMode(encoderB, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(encoderA), onEncoderChange, CHANGE);
 
   pinMode(ENA, OUTPUT);
   TrafficGoSignal();
