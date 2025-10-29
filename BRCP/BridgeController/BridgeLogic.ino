@@ -1,3 +1,9 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Most I2C LCDs use address 0x27 or 0x3F
+
+
 // Shared states
 String Traffic = "RED";
 String Boats = "RED";
@@ -5,7 +11,7 @@ String Brstat = "closed";
 bool emergencyStopActive = false;
 
 // Encoder pins
-const byte encoderA = 23;  // example pin
+const byte encoderA = 23; 
 const byte encoderB = 22;
 volatile long encoderCount = 0;
 long targetPosition = 0; // closed position
@@ -20,6 +26,12 @@ long targetPosition = 0; // closed position
 #define BoatGREEN 26
 #define TrafficRED 32
 #define TrafficGREEN 33
+
+// buzzer
+#define Buzzer 27
+
+// LCD
+
 
 
 // Encoder
@@ -111,6 +123,10 @@ void BridgeOpen() {
   Brstat = "opening";
   TrafficStopSignal();
   for (int i = 0; i < 4 && !emergencyStopActive; i++) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge opening");
+    tone(Buzzer, 2000);
     digitalWrite(BoatRED, HIGH);
     digitalWrite(BoatGREEN, HIGH);
     Boats = "GREEN";
@@ -119,10 +135,14 @@ void BridgeOpen() {
     digitalWrite(BoatRED, LOW);
     digitalWrite(BoatGREEN, LOW);
     delay(300);
+    noTone(Buzzer);
     if (emergencyStopActive) {
       return;
     }
   }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Bridge open");
   stopMotor();
   BoatGoSignal();
   digitalWrite(TrafficRED, HIGH);
@@ -134,10 +154,18 @@ void BridgeOpen() {
 void ManualOpen() {
     Brstat = "opening";
     for (int i = 0; i < 4 ; i++) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Manual opening");
+      tone(Buzzer, 2000);
       motorForward(200);
       delay(300);
       delay(300);
+      noTone(Buzzer);
     }
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge open");
     stopMotor();
     Brstat = "open";
 }
@@ -149,6 +177,10 @@ void BridgeClose() {
   }
   Brstat = "closing";
   for (int i = 0; i < 4 && !emergencyStopActive; i++) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge closing");
+    tone(Buzzer, 2000);
     digitalWrite(BoatRED, HIGH);
     digitalWrite(BoatGREEN, HIGH);
     Boats = "RED";
@@ -157,10 +189,14 @@ void BridgeClose() {
     digitalWrite(BoatRED, LOW);
     digitalWrite(BoatGREEN, LOW);
     delay(300);
+    noTone(Buzzer);
     if (emergencyStopActive) {
       return;
     }
   }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Bridge closed");
   stopMotor();
   BoatStopSignal();
   TrafficGoSignal();
@@ -170,10 +206,18 @@ void BridgeClose() {
 void ManualClose() {
     Brstat = "closing";
     for (int i = 0; i < 4 ; i++) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Manual closing");
+      tone(Buzzer, 2000);
       motorBackward(200);
       delay(300);
       delay(300);
+      noTone(Buzzer);
     }
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge closed");
     stopMotor();
     Brstat = "closed";
 }
@@ -231,6 +275,7 @@ void setupBridgePins() {
   pinMode(TrafficGREEN, OUTPUT);
   pinMode(encoderA, INPUT_PULLUP);
   pinMode(encoderB, INPUT_PULLUP);
+  pinMode(Buzzer, OUTPUT);
 
   attachInterrupt(digitalPinToInterrupt(encoderA), onEncoderChange, CHANGE);
 
@@ -238,4 +283,13 @@ void setupBridgePins() {
   TrafficGoSignal();
   BoatStopSignal();
   stopMotor();
+  // LCD setup
+  Wire.begin(16, 17);
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("BridgeController");
+  lcd.setCursor(0, 1);
+  lcd.print("Status: Ready");
 }

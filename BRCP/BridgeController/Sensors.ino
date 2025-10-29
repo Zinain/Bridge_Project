@@ -30,6 +30,11 @@ void bridgeTask(void* parameter) {
 
   for (;;) {
     if (emergencyStopActive) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("!! EMERGENCY !!");
+      lcd.setCursor(0, 1);
+      lcd.print("Bridge Stopped");
       vTaskDelay(200 / portTICK_PERIOD_MS);
       continue;
     }
@@ -44,6 +49,20 @@ void bridgeTask(void* parameter) {
 
       if (distanceCm1 < 5 || distanceCm2 < 5) {
         BridgeOpen();
+        
+        int timerSeconds = 5; // how long bridge stays open
+        while (timerSeconds > 0 && !emergencyStopActive) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Bridge open");
+          lcd.setCursor(0, 1);
+          lcd.print("Closes in: ");
+          lcd.print(timerSeconds);
+          lcd.print("s");
+          Serial.printf("Bridge closes in %d seconds\n", timerSeconds);
+          timerSeconds--;
+          vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
 
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
