@@ -26,11 +26,10 @@ long targetPosition = 0; // closed position
 #define BoatGREEN 26
 #define TrafficRED 32
 #define TrafficGREEN 33
+#define Yellow 14
 
 // buzzer
 #define Buzzer 27
-
-// LCD
 
 
 
@@ -68,15 +67,22 @@ void TrafficGoSignal() {
 }
 
 void TrafficStopSignal() {
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(TrafficRED, HIGH);
-    digitalWrite(TrafficGREEN, LOW);
-    Traffic = "RED";
-    delay(200);
-    digitalWrite(TrafficRED, LOW);
-    digitalWrite(TrafficGREEN, HIGH);
-    Traffic = "GREEN";
-    delay(200);
+  int timerSeconds = 10;
+  while (timerSeconds > 0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge closed");
+    lcd.setCursor(0, 1);
+    lcd.print("Opens in: ");
+    lcd.print(timerSeconds);
+    lcd.print("s");
+    Serial.printf("Bridge Opens in %d seconds\n", timerSeconds);
+    digitalWrite(Yellow, HIGH);
+    Traffic = "YELLOW";
+    Boats = "YELLOW";
+    timerSeconds--;
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    digitalWrite(Yellow, LOW);
   }
   digitalWrite(TrafficRED, HIGH);
   digitalWrite(TrafficGREEN, LOW);
@@ -116,12 +122,13 @@ void BoatToggle(){
 }
 
 void BridgeOpen() {
+  
   if (emergencyStopActive) {
     Serial.println("Cannot open bridge: Emergency stop active!");
     return;
   }
-  Brstat = "opening";
   TrafficStopSignal();
+  Brstat = "opening";
   for (int i = 0; i < 4 && !emergencyStopActive; i++) {
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -174,6 +181,23 @@ void BridgeClose() {
   if (emergencyStopActive) {
     Serial.println("Cannot close bridge: Emergency stop active!");
     return;
+  }
+  int timerSeconds = 5;
+  while (timerSeconds > 0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Bridge open");
+    lcd.setCursor(0, 1);
+    lcd.print("Closes in: ");
+    lcd.print(timerSeconds);
+    lcd.print("s");
+    Serial.printf("Bridge closes in %d seconds\n", timerSeconds);
+    digitalWrite(Yellow, HIGH);
+    Traffic = "YELLOW";
+    Boats = "YELLOW";
+    timerSeconds--;
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    digitalWrite(Yellow, LOW);
   }
   Brstat = "closing";
   for (int i = 0; i < 4 && !emergencyStopActive; i++) {
@@ -273,6 +297,7 @@ void setupBridgePins() {
   pinMode(BoatGREEN, OUTPUT);
   pinMode(TrafficRED, OUTPUT);
   pinMode(TrafficGREEN, OUTPUT);
+  pinMode(Yellow, OUTPUT);
   pinMode(encoderA, INPUT_PULLUP);
   pinMode(encoderB, INPUT_PULLUP);
   pinMode(Buzzer, OUTPUT);
